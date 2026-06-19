@@ -3,6 +3,7 @@ import pandas as pd
 import datetime
 from google import genai
 from google.genai import types
+from google.oauth2 import service_account
 import os
 
 # --- 1. CONFIGURATION & PROFESSIONAL DESIGN ---
@@ -12,7 +13,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# Custom responsive styling matching Google Developer hackathon aesthetics
 st.markdown("""
     <style>
     .main { background-color: #0f172a; }
@@ -44,32 +44,21 @@ st.markdown("""
 # --- 2. SECURE AUTHENTICATION MATRIX ---
 @st.cache_resource
 def get_ai_client():
-    """
-    Safely resolves credentials across multiple runtime environments:
-    1. Streamlit Production Cloud Secrets
-    2. Local key.json Service Account Configuration
-    3. Terminal Environment Exports
-    """
-    api_key = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
-    
-    # Check for service account file if no string key is explicitly provided
-    if not api_key and os.path.exists("key.json"):
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "key.json"
+    if os.path.exists("key.json"):
         try:
-            return genai.Client() # Automatically intercepts service account file context
-        except Exception:
-            return None
+            creds = service_account.Credentials.from_service_account_file("key.json")
+            return genai.Client()
+        except Exception as e:
+            st.sidebar.error(f"Credentials Parsing Error: {e}")
             
+    api_key = os.environ.get("GEMINI_API_KEY", "")
     if api_key:
         return genai.Client(api_key=api_key)
+        
     return None
 
 ai_client = get_ai_client()
 
-if not ai_client:
-    st.sidebar.warning("⚠️ AI Backend Offline. Add 'GEMINI_API_KEY' to Secrets or place your service account 'key.json' in the root directory.")
-
-# Initialize global tracking session state
 if 'history' not in st.session_state:
     st.session_state.history = []
 
@@ -83,7 +72,10 @@ with st.sidebar:
     user_region = st.selectbox("Operational Region", ["India", "North America", "Europe", "Other"])
     monthly_budget = st.slider("Target Carbon Budget (kg CO2/month)", 100, 2000, 500)
     st.markdown("---")
-    st.caption("System Status: Active")
+    if ai_client:
+        st.success("⚡ System Status: Connected to Gemini")
+    else:
+        st.error("⚠️ System Status: Offline (Check Credentials)")
 
 # --- 5. INTERACTIVE DASHBOARD STRUCTURE ---
 tab1, tab2, tab3 = st.tabs(["📊 Footprint Calculator", "💡 Personalized AI Insights", "📈 Tracking History"])
@@ -110,11 +102,10 @@ with tab1:
         diet_type = st.selectbox("Primary Diet Plan", ["Meat-heavy", "Balanced/Mixed", "Vegetarian", "Vegan"])
         food_waste = st.select_slider("Weekly food waste level", options=["Low", "Medium", "High"])
 
-    # Environmental conversion coefficients
+    # Corrected coefficients matrix dictionary formatting
     fuel_multipliers = {"Petrol": 0.24, "Diesel": 0.27, "Electric": 0.05, "CNG": 0.18}
     diet_multipliers = {"Meat-heavy": 300.0, "Balanced/Mixed": 200.0, "Vegetarian": 120.0, "Vegan": 80.0}
     
-    # Calculate algorithmic breakdowns
     transport_emissions = (km_driven * 52 * fuel_multipliers[fuel_type]) / 12
     transit_emissions = (public_transit * 52 * 0.1) / 12
     energy_emissions = electricity_kwh * 0.82 * (1 - clean_energy_pct/100)
@@ -124,7 +115,6 @@ with tab1:
 
     st.markdown("---")
     
-    # Polished layout components replacing basic text lines
     st.markdown(f"""
     <div class="metric-container">
         <div class="metric-card">
@@ -184,7 +174,6 @@ with tab2:
                     Compile a professional overview in clean markdown specifying the primary bottleneck, and 3 localized reduction tactics for {user_region}. Avoid fluff.
                     """
                     
-                    # Modern SDK implementation using the stable gemini-2.5-flash engine
                     response = ai_client.models.generate_content(
                         model='gemini-2.5-flash',
                         contents=user_prompt,
@@ -208,4 +197,3 @@ with tab3:
         df_history = pd.DataFrame(st.session_state.history)
         st.dataframe(df_history, use_container_width=True)
         st.line_chart(df_history.set_index("Date")["Total Emissions (kg)"])
-    
