@@ -3,7 +3,7 @@
 An advanced, context-aware digital application built for Main Challenge 3 of PromptWars 2026 (in collaboration with Google for Developers). EcoTrack AI enables individuals to dynamically calculate, analyze, and systematically reduce their daily environmental footprint using generative artificial intelligence.
 
 ## 🔗 Live Deployments
-* Live Application URL: https://ecotrack-carbon-platform-765144110696.us-central1.run.app/
+* Live Application URL: https://ecotrack-ai-104000000795.us-central1.run.app/
 * Source Code Repository: https://github.com/era651868-ctrl/EcoTrack-ai
 * Developer Organization: Hack2skill PromptWars 2026
 
