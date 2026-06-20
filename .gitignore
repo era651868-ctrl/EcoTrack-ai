@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.env
+secret.json
+key.json
+.streamlit/config.toml
